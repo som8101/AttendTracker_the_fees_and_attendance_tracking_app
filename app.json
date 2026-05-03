@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "techytech",
-    "slug": "techytech",
+    "name": "AttendTracker",
+    "slug": "attendtracker",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -34,7 +34,8 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
