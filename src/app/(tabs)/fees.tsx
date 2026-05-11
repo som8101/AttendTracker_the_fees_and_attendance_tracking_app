@@ -80,6 +80,18 @@ export default function FeesTabScreen() {
     setExpandedClassId(prev => prev === classId ? null : classId);
   };
 
+  const getDueDateDisplay = (student: StudentModel, targetMonthStr: string) => {
+    const startDateStr = student.fees_start_date || (student.join_month + '-01');
+    let startDay = 1;
+    if (startDateStr && startDateStr.length >= 10) {
+      startDay = parseInt(startDateStr.substring(8, 10)) || 1;
+    }
+    const year = parseInt(targetMonthStr.substring(0, 4));
+    const month = parseInt(targetMonthStr.substring(5, 7)) - 1;
+    const dueDate = new Date(year, month, startDay);
+    return format(dueDate, 'd MMM yyyy');
+  };
+
   const renderStudentItem = (student: StudentModel) => {
     const record = feeRecords[student.id];
     const isPaid = record?.status === 'paid';
@@ -88,7 +100,12 @@ export default function FeesTabScreen() {
       <View key={student.id} className="bg-white p-4 rounded-xl mb-3 border border-marble-200 shadow-sm mx-2 flex-row items-center justify-between">
         <TouchableOpacity className="flex-1" onPress={() => router.push(`/student/${student.id}`)}>
           <Text className="text-lg font-bold text-marble-900">{student.name}</Text>
-          <Text className="text-marble-500 text-sm mt-0.5">₹{student.monthly_fee || 0} / month</Text>
+          <View className="flex-row items-center mt-1">
+            <Text className="text-marble-500 text-xs font-bold bg-marble-100 px-2 py-0.5 rounded-md mr-2">
+              Due: {getDueDateDisplay(student, monthStr)}
+            </Text>
+            <Text className="text-marble-500 text-xs font-bold">₹{student.monthly_fee || 0}/mo</Text>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -172,8 +189,13 @@ export default function FeesTabScreen() {
 
   return (
     <View className="flex-1 bg-marble-50">
+      {/* Custom Header */}
+      <View className="bg-emerald-500 pt-16 pb-8 px-6 items-center rounded-b-[32px] shadow-lg z-20">
+        <Text className="text-2xl font-black text-white tracking-wide">Fees</Text>
+      </View>
+
       {/* Month Selector Header */}
-      <View className="bg-white pt-14 pb-4 px-4 shadow-sm z-10 border-b border-marble-100">
+      <View className="bg-white pt-8 pb-4 -mt-6 px-4 shadow-sm z-10 border-b border-marble-100">
         <View className="flex-row items-center justify-between bg-marble-50 rounded-xl p-2 border border-marble-200">
           <TouchableOpacity onPress={prevMonth} className="p-2">
             <ChevronLeft size={24} color="#387373" />
@@ -188,7 +210,7 @@ export default function FeesTabScreen() {
       </View>
 
       <FlatList
-        data={classes}
+        data={expandedClassId ? classes.filter(cls => cls.id === expandedClassId) : classes}
         keyExtractor={(item) => item.id}
         renderItem={renderClassAccordion}
         contentContainerStyle={{ paddingTop: 16, paddingBottom: 24 }}

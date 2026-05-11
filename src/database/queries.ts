@@ -1,5 +1,6 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback } from 'react';
+import { format } from 'date-fns';
 
 export type WeeklySchedule = {
   day: number; // 0=Sun, 1=Mon, ..., 6=Sat
@@ -31,6 +32,11 @@ export type StudentModel = {
   phone: string | null;
   monthly_fee: number | null;
   join_month?: string; // Format: YYYY-MM
+  parent_phone?: string | null;
+  whatsapp_student?: string | null;
+  whatsapp_parent?: string | null;
+  admission_date?: string | null; // Format: YYYY-MM-DD
+  fees_start_date?: string | null; // Format: YYYY-MM-DD
 };
 
 export type AttendanceModel = {
@@ -98,6 +104,13 @@ export function useDatabase() {
     await db.runAsync('DELETE FROM classes WHERE id = ?', [id]);
   }, [db]);
 
+  const updateClassSchedule = useCallback(async (id: string, days_of_week: string, weekly_schedule: string) => {
+    await db.runAsync(
+      'UPDATE classes SET days_of_week = ?, weekly_schedule = ? WHERE id = ?',
+      [days_of_week, weekly_schedule, id]
+    );
+  }, [db]);
+
   // Students
   const getStudentsByClass = useCallback(async (classId: string): Promise<StudentModel[]> => {
     return await db.getAllAsync<StudentModel>(
@@ -118,11 +131,11 @@ export function useDatabase() {
   }, [db]);
 
   const addStudent = useCallback(async (student: StudentModel) => {
-    const currentMonthStr = new Date().toISOString().substring(0, 7);
+    const currentMonthStr = format(new Date(), 'yyyy-MM');
     const joinMonth = student.join_month || currentMonthStr;
     await db.runAsync(
-      'INSERT INTO students (id, class_id, name, roll_number, phone, monthly_fee, join_month) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [student.id, student.class_id, student.name, student.roll_number, student.phone, student.monthly_fee, joinMonth]
+      'INSERT INTO students (id, class_id, name, roll_number, phone, monthly_fee, join_month, parent_phone, whatsapp_student, whatsapp_parent, admission_date, fees_start_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [student.id, student.class_id, student.name, student.roll_number, student.phone, student.monthly_fee, joinMonth, student.parent_phone || null, student.whatsapp_student || null, student.whatsapp_parent || null, student.admission_date || null, student.fees_start_date || null]
     );
   }, [db]);
 
@@ -130,6 +143,27 @@ export function useDatabase() {
     await db.runAsync('DELETE FROM fees WHERE student_id = ?', [id]);
     await db.runAsync('DELETE FROM attendance WHERE student_id = ?', [id]);
     await db.runAsync('DELETE FROM students WHERE id = ?', [id]);
+  }, [db]);
+
+  const updateStudent = useCallback(async (student: StudentModel) => {
+    await db.runAsync(
+      `UPDATE students 
+       SET name = ?, roll_number = ?, phone = ?, monthly_fee = ?, parent_phone = ?, 
+           whatsapp_student = ?, whatsapp_parent = ?, admission_date = ?, fees_start_date = ? 
+       WHERE id = ?`,
+      [
+        student.name, 
+        student.roll_number, 
+        student.phone, 
+        student.monthly_fee, 
+        student.parent_phone || null, 
+        student.whatsapp_student || null, 
+        student.whatsapp_parent || null, 
+        student.admission_date || null, 
+        student.fees_start_date || null, 
+        student.id
+      ]
+    );
   }, [db]);
 
   // Attendance
@@ -197,8 +231,8 @@ export function useDatabase() {
     const totalStudentsRes = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM students');
 
     // For today's attendance summary and pending fees, we might need specific dates
-    const todayStr = new Date().toISOString().split('T')[0];
-    const currentMonthStr = todayStr.substring(0, 7);
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const currentMonthStr = format(new Date(), 'yyyy-MM');
 
     const todayAttendanceRes = await db.getAllAsync<{ status: string; count: number }>(
       'SELECT status, COUNT(*) as count FROM attendance WHERE date = ? GROUP BY status',
@@ -240,7 +274,7 @@ export function useDatabase() {
   // Overdue calculation
   const calculateOverdueFees = useCallback(async (studentId: string): Promise<{ monthsDue: string[], totalDue: number }> => {
     const student = await getStudentById(studentId);
-    if (!student || !student.join_month || !student.monthly_fee) return { monthsDue: [], totalDue: 0 };
+    if (!student || (!student.join_month && !student.fees_start_date) || !student.monthly_fee) return { monthsDue: [], totalDue: 0 };
 
     const paidRecords = await db.getAllAsync<{ month: string }>(
       'SELECT month FROM fees WHERE student_id = ? AND status = "paid"',
@@ -249,22 +283,36 @@ export function useDatabase() {
     const paidMonths = new Set(paidRecords.map(r => r.month));
 
     const today = new Date();
-    const currentMonthStr = today.toISOString().substring(0, 7);
-    const currentDay = today.getDate();
 
-    let checkDate = new Date(student.join_month + '-01T00:00:00Z');
+    // Default to join_month with day 1 if no fees_start_date is available
+    const startDateStr = student.fees_start_date || (student.join_month + '-01');
+    const startYear = parseInt(startDateStr.substring(0, 4));
+    const startMonth = parseInt(startDateStr.substring(5, 7)) - 1; // 0-indexed
+    const startDay = parseInt(startDateStr.substring(8, 10)) || 1;
+
+    let checkDate = new Date(Date.UTC(startYear, startMonth, 1));
     let monthsDue: string[] = [];
 
-    while (checkDate <= today) {
+    // Today UTC for comparison
+    const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+
+    // We only check up to the current month
+    while (checkDate.getUTCFullYear() < todayUTC.getUTCFullYear() || 
+          (checkDate.getUTCFullYear() === todayUTC.getUTCFullYear() && checkDate.getUTCMonth() <= todayUTC.getUTCMonth())) {
+      
       const checkMonthStr = checkDate.toISOString().substring(0, 7);
 
       if (!paidMonths.has(checkMonthStr)) {
-        // If it's a past month, it's due.
-        // If it's the current month, it's due only if day > 10.
-        if (checkMonthStr < currentMonthStr || (checkMonthStr === currentMonthStr && currentDay > 10)) {
+        // Calculate exact due date for this specific month based on startDay + 10
+        // We set the date to startDay, then add 10 days.
+        const dueDate = new Date(Date.UTC(checkDate.getUTCFullYear(), checkDate.getUTCMonth(), startDay));
+        dueDate.setUTCDate(dueDate.getUTCDate() + 10);
+
+        if (todayUTC > dueDate) {
           monthsDue.push(checkMonthStr);
         }
       }
+      
       // Move to next month
       checkDate.setUTCMonth(checkDate.getUTCMonth() + 1);
     }
@@ -286,6 +334,7 @@ export function useDatabase() {
     getAllStudents,
     getStudentById,
     addStudent,
+    updateStudent,
     deleteStudent,
     markAttendance,
     getAttendanceByClassAndDate,
@@ -297,6 +346,7 @@ export function useDatabase() {
     getFeesByStudent,
     getDashboardSummary,
     getClassSummary,
-    calculateOverdueFees
+    calculateOverdueFees,
+    updateClassSchedule
   };
 }
