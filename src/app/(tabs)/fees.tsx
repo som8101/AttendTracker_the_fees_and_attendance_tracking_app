@@ -81,14 +81,15 @@ export default function FeesTabScreen() {
   };
 
   const getDueDateDisplay = (student: StudentModel, targetMonthStr: string) => {
-    const startDateStr = student.fees_start_date || (student.join_month + '-01');
-    let startDay = 1;
-    if (startDateStr && startDateStr.length >= 10) {
-      startDay = parseInt(startDateStr.substring(8, 10)) || 1;
-    }
+    const startDateStr = student.fees_start_date 
+      || (student.join_month ? `${student.join_month}-01` : null);
+    if (!startDateStr) return '—';
+    const startDay = parseInt(startDateStr.substring(8, 10)) || 1;
     const year = parseInt(targetMonthStr.substring(0, 4));
     const month = parseInt(targetMonthStr.substring(5, 7)) - 1;
-    const dueDate = new Date(year, month, startDay);
+    const dueDate = new Date(Date.UTC(year, month, startDay));
+    // To format a UTC date as local we add timezone offset so format() shows the same day.
+    dueDate.setMinutes(dueDate.getMinutes() + dueDate.getTimezoneOffset());
     return format(dueDate, 'd MMM yyyy');
   };
 

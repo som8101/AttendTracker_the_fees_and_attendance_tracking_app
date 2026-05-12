@@ -10,11 +10,11 @@
     "ios": {
       "icon": "./assets/images/app-icon.jpg",
       "bundleIdentifier": "com.teachytech.samiransir",
-      "buildNumber": "4"
+      "buildNumber": "6"
     },
     "android": {
       "package": "com.teachytech.samiransir",
-      "versionCode": 4,
+      "versionCode": 6,
       "adaptiveIcon": {
         "backgroundColor": "#2D3E40",
         "foregroundImage": "./assets/images/app-icon.jpg"

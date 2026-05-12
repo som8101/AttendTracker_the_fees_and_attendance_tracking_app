@@ -90,7 +90,7 @@ export default function ProfileScreen() {
         <TouchableOpacity 
           onPress={handleSync}
           disabled={isSyncing || !user}
-          className={`bg-white rounded-[24px] shadow-sm border border-blue-50 p-5 flex-row items-center justify-between ${!user && 'opacity-60'}`}
+          className={`bg-white rounded-[24px] shadow-sm border border-blue-50 p-5 flex-row items-center justify-between ${!user ? 'opacity-60' : ''}`}
         >
           <View className="flex-row items-center flex-1">
             <View className="w-14 h-14 bg-blue-50 rounded-2xl items-center justify-center mr-4">

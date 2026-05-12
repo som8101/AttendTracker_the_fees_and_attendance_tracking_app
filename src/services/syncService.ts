@@ -24,7 +24,9 @@ export class SyncService {
     }
     
     const isConnected = (await NetInfo.fetch()).isConnected;
-    if (!isConnected) return;
+    if (!isConnected) {
+      throw new Error('No network connection');
+    }
 
     isSyncing = true;
     try {
@@ -42,7 +44,7 @@ export class SyncService {
   }
 
   /**
-   * Pushes all local rows where sync_status is 'pending' or 'deleted'
+   * Pushes all local rows where sync_status is 'pending' (including soft-deleted rows marked with is_deleted = 1).
    */
   private async pushLocalChanges(userId: string) {
     for (const table of TABLES) {

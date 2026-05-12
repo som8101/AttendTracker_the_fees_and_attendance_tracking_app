@@ -18,9 +18,7 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
         id TEXT PRIMARY KEY NOT NULL,
         name TEXT NOT NULL,
         subject TEXT,
-        timing TEXT,
-        days_of_week TEXT,
-        weekly_schedule TEXT
+        timing TEXT
       );
 
       CREATE TABLE IF NOT EXISTS students (

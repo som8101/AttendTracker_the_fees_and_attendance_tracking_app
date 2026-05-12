@@ -59,6 +59,10 @@ export default function AttendanceTabScreen() {
     setStudents(allStudents);
     setDayExtraClasses(extraClasses);
 
+    setExpandedClassId(prev => 
+      prev && !scheduledClasses.some(c => c.id === prev) ? null : prev
+    );
+
     const recordsMap = attendanceData.reduce((acc, curr) => {
       acc[curr.student_id] = curr;
       return acc;

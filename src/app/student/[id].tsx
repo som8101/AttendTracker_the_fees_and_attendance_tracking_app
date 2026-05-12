@@ -43,8 +43,8 @@ export default function StudentDetailsScreen() {
     setEditWhatsappStudent(student.whatsapp_student || '');
     setEditWhatsappParent(student.whatsapp_parent || '');
     setEditMonthlyFee(student.monthly_fee ? student.monthly_fee.toString() : '');
-    setEditAdmissionDate(student.admission_date ? new Date(student.admission_date) : new Date());
-    setEditFeesStartDate(student.fees_start_date ? new Date(student.fees_start_date) : new Date());
+    setEditAdmissionDate(student.admission_date ? parseISO(student.admission_date) : new Date());
+    setEditFeesStartDate(student.fees_start_date ? parseISO(student.fees_start_date) : new Date());
     setEditModalVisible(true);
   };
 
@@ -256,13 +256,13 @@ export default function StudentDetailsScreen() {
                 {student.admission_date && (
                   <View className="items-center">
                     <Text className="text-xs font-bold text-purple-500 uppercase tracking-wide">Admission</Text>
-                    <Text className="font-black text-purple-900 mt-0.5">{format(new Date(student.admission_date), 'MMM d, yyyy')}</Text>
+                    <Text className="font-black text-purple-900 mt-0.5">{format(parseISO(student.admission_date), 'MMM d, yyyy')}</Text>
                   </View>
                 )}
                 {student.fees_start_date && (
                   <View className="items-center">
                     <Text className="text-xs font-bold text-purple-500 uppercase tracking-wide">Fee Cycle Start</Text>
-                    <Text className="font-black text-purple-900 mt-0.5">{format(new Date(student.fees_start_date), 'MMM d, yyyy')}</Text>
+                    <Text className="font-black text-purple-900 mt-0.5">{format(parseISO(student.fees_start_date), 'MMM d, yyyy')}</Text>
                   </View>
                 )}
               </View>

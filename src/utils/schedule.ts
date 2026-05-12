@@ -42,6 +42,7 @@ export function checkScheduleOverlap(
             const existEnd = parseTime(existingItem.endTime);
 
             // Overlap condition:
+            // Note: This logic assumes no cross-midnight ranges.
             if (newStart < existEnd && newEnd > existStart) {
               const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
               return `Clash on ${days[newItem.day]}!\n"${cls.name}" is scheduled from ${existingItem.startTime} to ${existingItem.endTime}, which overlaps with your selected ${newItem.startTime} - ${newItem.endTime}.`;

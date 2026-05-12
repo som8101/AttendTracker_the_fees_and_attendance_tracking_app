@@ -1,14 +1,25 @@
-import { View, Text, TouchableOpacity, PanResponder } from 'react-native';
+import { View, Text, TouchableOpacity, PanResponder, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useDatabase, StudentModel, AttendanceModel } from '../../../database/queries';
 import { useState, useCallback, useRef } from 'react';
 import { ArrowLeft, Check, X, Clock, Phone, User, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useFocusEffect } from 'expo-router';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { FontAwesome } from '@expo/vector-icons';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import * as Linking from 'expo-linking';
+
+const openWhatsApp = async (phone: string) => {
+  const digits = phone.replace(/\D/g, '');
+  const url = `whatsapp://send?phone=${digits}`;
+  const supported = await Linking.canOpenURL(url);
+  if (supported) {
+    Linking.openURL(url);
+  } else {
+    Alert.alert('WhatsApp not available', 'WhatsApp does not appear to be installed.');
+  }
+};
 
 export default function AttendanceScreen() {
   const { id } = useLocalSearchParams();
@@ -248,7 +259,7 @@ export default function AttendanceScreen() {
             <View className="flex-row flex-wrap justify-center mt-2 gap-2">
               {currentStudent.whatsapp_student && (
                 <TouchableOpacity 
-                  onPress={() => Linking.openURL(`whatsapp://send?phone=${currentStudent.whatsapp_student}`)}
+                  onPress={() => openWhatsApp(currentStudent.whatsapp_student!)}
                   className="flex-row items-center bg-green-50 px-3 py-2 rounded-full border border-green-100"
                 >
                   <FontAwesome name="whatsapp" size={16} color="#15803d" />
@@ -257,7 +268,7 @@ export default function AttendanceScreen() {
               )}
               {currentStudent.whatsapp_parent && (
                 <TouchableOpacity 
-                  onPress={() => Linking.openURL(`whatsapp://send?phone=${currentStudent.whatsapp_parent}`)}
+                  onPress={() => openWhatsApp(currentStudent.whatsapp_parent!)}
                   className="flex-row items-center bg-green-50 px-3 py-2 rounded-full border border-green-100"
                 >
                   <FontAwesome name="whatsapp" size={16} color="#15803d" />
@@ -284,7 +295,7 @@ export default function AttendanceScreen() {
                       {record.status === 'late' && <Clock size={14} color="#ca8a04" />}
                       {record.status === 'absent' && <X size={14} color="#dc2626" />}
                     </View>
-                    <Text className="text-[10px] text-marble-500 font-bold">{format(new Date(record.date), 'MMM d')}</Text>
+                    <Text className="text-[10px] text-marble-500 font-bold">{format(parseISO(record.date), 'MMM d')}</Text>
                   </View>
                 ))}
 
