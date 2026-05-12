@@ -71,6 +71,7 @@ export class SyncService {
           );
         } else {
           console.error(`Error pushing to ${table}:`, error);
+          throw error;
         }
       }
     }
@@ -91,7 +92,7 @@ export class SyncService {
 
       if (error) {
         console.error(`Error pulling from ${table}:`, error);
-        continue;
+        throw error;
       }
 
       if (data && data.length > 0) {
@@ -102,13 +103,14 @@ export class SyncService {
           } else {
             // Dynamically construct insert/replace query based on object keys
             // Exclude user_id from local insert if not strictly necessary, but we have the column now.
-            const keys = Object.keys(row);
-            const values = Object.values(row);
-            const placeholders = keys.map(() => '?').join(',');
+            const { sync_status: _syncStatus, ...localRow } = row;
+            const keys = Object.keys(localRow);
+            const values = Object.values(localRow);
+            const placeholders = [...keys, 'sync_status'].map(() => '?').join(',');
             
             await this.db.runAsync(
-              `INSERT OR REPLACE INTO ${table} (${keys.join(',')}, sync_status) VALUES (${placeholders}, 'synced')`,
-              values
+              `INSERT OR REPLACE INTO ${table} (${keys.join(',')}, sync_status) VALUES (${placeholders})`,
+              [...values, 'synced']
             );
           }
         }

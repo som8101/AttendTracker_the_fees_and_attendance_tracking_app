@@ -26,6 +26,15 @@ export function checkScheduleOverlap(
   existingClasses: ClassModel[],
   excludeClassId?: string
 ): string | null {
+  // Validate new schedule times
+  for (const item of newSchedule) {
+    const start = parseTime(item.startTime);
+    const end = parseTime(item.endTime);
+    if (end <= start) {
+      return `Invalid time range: ${item.startTime} to ${item.endTime}. End time must be after start time.`;
+    }
+  }
+
   for (const cls of existingClasses) {
     if (cls.id === excludeClassId) continue;
     if (!cls.weekly_schedule) continue;
