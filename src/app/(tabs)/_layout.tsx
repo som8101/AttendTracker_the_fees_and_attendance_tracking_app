@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { LayoutDashboard, Users, ClipboardCheck, Wallet } from 'lucide-react-native';
+import { LayoutDashboard, Users, ClipboardCheck, Wallet, AlertCircle, User } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -33,6 +33,7 @@ export default function TabLayout() {
         name="classes"
         options={{
           title: 'Classes',
+          headerShown: false,
           tabBarIcon: ({ color }) => <Users size={24} color={color} />,
         }}
       />
@@ -40,6 +41,7 @@ export default function TabLayout() {
         name="attendance"
         options={{
           title: 'Attendance',
+          headerShown: false,
           tabBarIcon: ({ color }) => <ClipboardCheck size={24} color={color} />,
         }}
       />
@@ -49,6 +51,22 @@ export default function TabLayout() {
           title: 'Fees',
           headerShown: false,
           tabBarIcon: ({ color }) => <Wallet size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="dues"
+        options={{
+          title: 'Dues',
+          headerShown: false,
+          tabBarIcon: ({ color }) => <AlertCircle size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          headerShown: false,
+          href: null,
         }}
       />
     </Tabs>

@@ -59,6 +59,10 @@ export default function AttendanceTabScreen() {
     setStudents(allStudents);
     setDayExtraClasses(extraClasses);
 
+    setExpandedClassId(prev => 
+      prev && !scheduledClasses.some(c => c.id === prev) ? null : prev
+    );
+
     const recordsMap = attendanceData.reduce((acc, curr) => {
       acc[curr.student_id] = curr;
       return acc;
@@ -251,8 +255,13 @@ export default function AttendanceTabScreen() {
 
   return (
     <View className="flex-1 bg-marble-50">
+      {/* Custom Header */}
+      <View className="bg-emerald-500 pt-16 pb-8 px-6 items-center rounded-b-[32px] shadow-lg z-20">
+        <Text className="text-2xl font-black text-white tracking-wide">Attendance</Text>
+      </View>
+
       {/* Calendar Header & Strip */}
-      <View className="bg-white pb-4 border-b border-marble-100 z-10 shadow-sm">
+      <View className="bg-white pt-8 pb-4 -mt-6 border-b border-marble-100 z-10 shadow-sm">
         {/* Month Selector */}
         <View className="flex-row items-center justify-between px-4 py-2 mb-2">
           <TouchableOpacity onPress={prevMonth} className="p-2 bg-marble-50 rounded-full">
@@ -296,7 +305,7 @@ export default function AttendanceTabScreen() {
       </View>
 
       <FlatList
-        data={classes}
+        data={expandedClassId ? classes.filter(cls => cls.id === expandedClassId) : classes}
         keyExtractor={(item) => item.id}
         renderItem={renderClassAccordion}
         contentContainerStyle={{ paddingTop: 16, paddingBottom: 24 }}

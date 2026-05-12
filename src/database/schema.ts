@@ -1,7 +1,7 @@
 import { type SQLiteDatabase } from 'expo-sqlite';
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
-  const DATABASE_VERSION = 4;
+  const DATABASE_VERSION = 6;
   
   let user_version = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   let currentDbVersion = user_version?.user_version || 0;
@@ -18,9 +18,7 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
         id TEXT PRIMARY KEY NOT NULL,
         name TEXT NOT NULL,
         subject TEXT,
-        timing TEXT,
-        days_of_week TEXT,
-        weekly_schedule TEXT
+        timing TEXT
       );
 
       CREATE TABLE IF NOT EXISTS students (
@@ -92,6 +90,28 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     await db.execAsync(`
       ALTER TABLE classes ADD COLUMN weekly_schedule TEXT;
     `);
+  }
+
+  if (currentDbVersion < 5) {
+    await db.execAsync(`
+      ALTER TABLE students ADD COLUMN parent_phone TEXT;
+      ALTER TABLE students ADD COLUMN whatsapp_student TEXT;
+      ALTER TABLE students ADD COLUMN whatsapp_parent TEXT;
+      ALTER TABLE students ADD COLUMN admission_date TEXT;
+      ALTER TABLE students ADD COLUMN fees_start_date TEXT;
+    `);
+  }
+
+  if (currentDbVersion < 6) {
+    const tables = ['classes', 'students', 'attendance', 'fees', 'extra_classes'];
+    for (const table of tables) {
+      await db.execAsync(`
+        ALTER TABLE ${table} ADD COLUMN user_id TEXT;
+        ALTER TABLE ${table} ADD COLUMN sync_status TEXT DEFAULT 'pending';
+        ALTER TABLE ${table} ADD COLUMN updated_at TEXT;
+        ALTER TABLE ${table} ADD COLUMN is_deleted INTEGER DEFAULT 0;
+      `);
+    }
   }
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
