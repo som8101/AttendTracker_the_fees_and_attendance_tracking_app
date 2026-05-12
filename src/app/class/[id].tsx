@@ -8,13 +8,13 @@ import { format, parse } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
-import { checkScheduleOverlap } from '../../utils/schedule';
+import { checkScheduleOverlap, parseTime } from '../../utils/schedule';
 
 export default function ClassDetailsScreen() {
   const { id } = useLocalSearchParams();
   const classId = id as string;
 
-  const { getStudentsByClass, addStudent, getClasses, getClassSummary, addExtraClass, getExtraClassesByClass, updateClassSchedule } = useDatabase();
+  const { getStudentsByClass, addStudent, getClasses, getClassSummary, addExtraClass, getExtraClassesByClass, getExtraClassesByDate, updateClassSchedule } = useDatabase();
   const [students, setStudents] = useState<StudentModel[]>([]);
   const [classInfo, setClassInfo] = useState<ClassModel | null>(null);
   const [summary, setSummary] = useState({
@@ -184,11 +184,32 @@ export default function ClassDetailsScreen() {
     const formattedTiming = `${format(extraStartTime, 'h:mm a')} - ${format(extraEndTime, 'h:mm a')}`;
     const dateStr = format(extraDate, 'yyyy-MM-dd');
 
-    // Check for existing extra class on the same date
-    const existingExtraClasses = await getExtraClassesByClass(classId);
-    if (existingExtraClasses.some(ec => ec.date === dateStr)) {
-      Alert.alert('Duplicate Date', 'An extra class is already scheduled on this date.');
+    // Check for existing extra class on the same date with overlapping time
+    const existingExtraClasses = await getExtraClassesByDate(dateStr);
+    const allClasses = await getClasses();
+
+    const newStart = extraStartTime.getHours() * 60 + extraStartTime.getMinutes();
+    const newEnd = extraEndTime.getHours() * 60 + extraEndTime.getMinutes();
+
+    if (newEnd <= newStart) {
+      Alert.alert('Invalid Time', 'End time must be after start time.');
       return;
+    }
+
+    for (const ec of existingExtraClasses) {
+      const [startStr, endStr] = ec.timing.split(' - ');
+      const existStart = parseTime(startStr);
+      const existEnd = parseTime(endStr);
+
+      if (newStart < existEnd && newEnd > existStart) {
+        const conflictingClass = allClasses.find(c => c.id === ec.class_id);
+        const className = conflictingClass ? conflictingClass.name : 'Another class';
+        Alert.alert(
+          'Schedule Conflict',
+          `An extra class is already scheduled for "${className}" at ${ec.timing} on this date.`
+        );
+        return;
+      }
     }
 
     await addExtraClass({

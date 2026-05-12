@@ -52,6 +52,12 @@
         "projectId": "147378c0-0ba9-4b96-9e8f-d58be135d1c0"
       }
     },
-    "owner": "somnathgorai"
+    "owner": "somnathgorai",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/147378c0-0ba9-4b96-9e8f-d58be135d1c0"
+    }
   }
 }

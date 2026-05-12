@@ -7,7 +7,7 @@ type ScheduleItem = {
   endTime: string;   // '10:00 AM'
 };
 
-function parseTime(timeStr: string): number {
+export function parseTime(timeStr: string): number {
   try {
     const [time, period] = timeStr.trim().split(/\s+/);
     let [hours, minutes] = time.split(':').map(Number);

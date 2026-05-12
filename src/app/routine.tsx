@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, Dimensions } fr
 import { useRouter } from 'expo-router';
 import { ArrowLeft, CalendarDays, Clock, MapPin } from 'lucide-react-native';
 import { useDatabase, ClassModel } from '../database/queries';
-import { parse } from 'date-fns';
+import { parse, startOfWeek, addDays, format } from 'date-fns';
 
 type ScheduleItem = {
   day: number;
@@ -18,6 +18,7 @@ type RoutineEntry = {
   endTime: string;
   startMinutes: number;
   colorIndex: number;
+  isExtra?: boolean;
 };
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -47,8 +48,11 @@ function parseTime(timeStr: string): number {
 
 export default function RoutineScreen() {
   const router = useRouter();
-  const { getClasses } = useDatabase();
+  const { getClasses, getExtraClassesByDate } = useDatabase();
   const [classes, setClasses] = useState<ClassModel[]>([]);
+  const [extraClassesMap, setExtraClassesMap] = useState<Record<number, RoutineEntry[]>>({
+    0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: []
+  });
   const [activeDay, setActiveDay] = useState(new Date().getDay());
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -59,6 +63,37 @@ export default function RoutineScreen() {
   const loadClasses = async () => {
     const data = await getClasses();
     setClasses(data);
+
+    // Load extra classes for the current week
+    const today = new Date();
+    const sunday = startOfWeek(today);
+    
+    const extraMap: Record<number, RoutineEntry[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+    
+    for (let i = 0; i < 7; i++) {
+      const date = addDays(sunday, i);
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const extras = await getExtraClassesByDate(dateStr);
+      
+      extras.forEach((ex: any) => {
+        const cls = data.find(c => c.id === ex.class_id);
+        if (cls) {
+          const [startTime, endTime] = ex.timing.split(' - ');
+          // Assign a unique color index for extra classes (e.g. 2 for purple)
+          const colorIdx = 2; 
+          extraMap[i].push({
+            classId: cls.id,
+            className: cls.name,
+            startTime: startTime.trim(),
+            endTime: endTime.trim(),
+            startMinutes: parseTime(startTime),
+            colorIndex: colorIdx,
+            isExtra: true
+          });
+        }
+      });
+    }
+    setExtraClassesMap(extraMap);
   };
 
   // Group classes by day and sort chronologically
@@ -87,13 +122,16 @@ export default function RoutineScreen() {
       }
     });
 
-    // Sort each day chronologically
+    // Merge extra classes and sort each day chronologically
     for (let day = 0; day < 7; day++) {
+      if (extraClassesMap[day]) {
+        grouped[day].push(...extraClassesMap[day]);
+      }
       grouped[day].sort((a, b) => a.startMinutes - b.startMinutes);
     }
 
     return grouped;
-  }, [classes]);
+  }, [classes, extraClassesMap]);
 
   // Handle auto-scroll to current day pill
   useEffect(() => {
@@ -195,9 +233,16 @@ export default function RoutineScreen() {
 
                   {/* Class Info */}
                   <View className="flex-1 justify-center">
-                    <Text className={`text-xl font-black ${color.text} mb-1`}>
-                      {item.className}
-                    </Text>
+                    <View className="flex-row items-center mb-1">
+                      <Text className={`text-xl font-black ${color.text} flex-shrink`}>
+                        {item.className}
+                      </Text>
+                      {item.isExtra && (
+                        <View className="bg-purple-200 px-2 py-0.5 rounded-md ml-2 border border-purple-300">
+                          <Text className="text-purple-800 text-xs font-bold uppercase">Extra</Text>
+                        </View>
+                      )}
+                    </View>
                     <View className="flex-row items-center">
                       <Text className={`font-bold ${color.text} opacity-80 text-base`}>
                         {item.startTime} - {item.endTime}
